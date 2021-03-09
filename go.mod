@@ -1,4 +1,4 @@
-module git.latour.dev/clatour/peloton-go
+module github.com/clatour/peloton-go
 
 go 1.14
 
