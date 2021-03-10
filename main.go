@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +11,8 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
-
+	"github.com/aws/aws-lambda-go/events"
+	runtime "github.com/aws/aws-lambda-go/lambda"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -294,7 +296,7 @@ func (c *Client) WorkoutsCSV(userID string) ([]byte, error) {
 	return ioutil.ReadAll(res.Body)
 }
 
-func main() {
+func handleRequest(ctx context.Context, event events.SQSEvent) (string, error) {
 	c := NewClient()
 	err := c.Login(os.Getenv("USERNAME"), os.Getenv("PASSWORD"))
 	if err != nil {
@@ -306,18 +308,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/workouts.csv", func(w http.ResponseWriter, req *http.Request) {
-		workouts, err := c.WorkoutsCSV(me.ID)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	workouts, err := c.WorkoutsCSV(me.ID)
+	if err != nil {
+		log.Fatal(err)
+		return err.Error(), nil
+	}
 
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "text/csv")
-		w.Write(workouts)
-	})
+	return string(workouts), nil
+}
 
-	http.ListenAndServe(":9000", mux)
+func main() {
+  runtime.Start(handleRequest)
 }
