@@ -11,6 +11,8 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"github.com/aws/aws-lambda-go/events"
 	runtime "github.com/aws/aws-lambda-go/lambda"
 	"golang.org/x/net/publicsuffix"
@@ -30,98 +32,6 @@ type ErrorResponse struct {
 	SubCode   int    `json:"subcode,omitempty"`
 	Message   string `json:"message"`
 	Details   string `json:"details,omitempty"`
-}
-
-type WorkoutsResponse struct {
-	Data []struct {
-		CreatedAt                  int     `json:"created_at"`
-		DeviceType                 string  `json:"device_type"`
-		EndTime                    int     `json:"end_time"`
-		FitbitID                   string  `json:"fitbit_id,omitempty"`
-		FitnessDiscipline          string  `json:"fitness_discipline"`
-		HasPedalingMetrics         bool    `json:"has_pedaling_metrics"`
-		HasLeaderboardMetrics      bool    `json:"has_leaderboard_metrics"`
-		ID                         string  `json:"id"`
-		IsTotalWorkPersonalRecord  bool    `json:"is_total_work_personal_record"`
-		MetricsType                string  `json:"metrics_type"`
-		Name                       string  `json:"name"`
-		PelotonID                  string  `json:"peloton_id"`
-		Platform                   string  `json:"platform"`
-		StartTime                  int     `json:"start_time"`
-		StravaID                   string  `json:"strava_id"`
-		Status                     string  `json:"status"`
-		Timezone                   string  `json:"timezone"`
-		Title                      string  `json:"title,omitempty"`
-		TotalWork                  float64 `json:"total_work"`
-		UserID                     string  `json:"user_id"`
-		WorkoutType                string  `json:"workout_type"`
-		TotalVideoWatchTimeSeconds int     `json:"total_video_watch_time_seconds"`
-		TotalVideoBufferingSeconds int     `json:"total_video_buffering_seconds"`
-		Ride                       struct {
-			HasClosedCaptions            bool     `json:"has_closed_captions"`
-			ContentProvider              string   `json:"content_provider"`
-			ContentFormat                string   `json:"content_format"`
-			Description                  string   `json:"description"`
-			DifficultyRatingAvg          float64  `json:"difficulty_rating_avg"`
-			DifficultyRatingCount        int      `json:"difficulty_rating_count"`
-			DifficultyLevel              string   `json:"difficulty_level"`
-			Duration                     int      `json:"duration"`
-			ExtraImages                  []string `json:"extra_images,omitempty"`
-			FitnessDiscipline            string   `json:"fitness_discipline"`
-			FitnessDisciplineDisplayName string   `json:"fitness_discipline_display_name"`
-			HasPedalingMetrics           bool     `json:"has_pedaling_metrics"`
-			HomePelotonID                string   `json:"home_peloton_id"`
-			ID                           string   `json:"id"`
-			ImageURL                     string   `json:"image_url"`
-			InstructorID                 string   `json:"instructor_id"`
-			IsArchived                   bool     `json:"is_archived"`
-			IsClosedCaptionShown         bool     `json:"is_closed_caption_shown"`
-			IsExplicit                   bool     `json:"is_explicit"`
-			IsLiveInStudioOnly           bool     `json:"is_live_in_studio_only"`
-			Language                     string   `json:"language"`
-			Length                       int      `json:"length"`
-			LiveStreamID                 string   `json:"live_stream_id"`
-			LiveStreamURL                string   `json:"live_stream_url,omitempty"`
-			Location                     string   `json:"location"`
-			Metrics                      []string `json:"metrics"`
-			OriginalAirTime              int      `json:"original_air_time"`
-			OverallRatingAvg             float64  `json:"overall_rating_avg"`
-			OverallRatingCount           int      `json:"overall_rating_count"`
-			PedalingStartOffset          int      `json:"pedaling_start_offset"`
-			PedalingEndOffset            int      `json:"pedaling_end_offset"`
-			PedalingDuration             int      `json:"pedaling_duration"`
-			Rating                       int      `json:"rating"`
-			RideTypeID                   string   `json:"ride_type_id"`
-			RideTypeIds                  []string `json:"ride_type_ids"`
-			SampleVodStreamURL           string   `json:"sample_vod_stream_url,omitempty"`
-			ScheduledStartTime           int      `json:"scheduled_start_time"`
-			SeriesID                     string   `json:"series_id"`
-			SoldOut                      bool     `json:"sold_out"`
-			StudioPelotonID              string   `json:"studio_peloton_id"`
-			Title                        string   `json:"title"`
-			TotalRatings                 int      `json:"total_ratings"`
-			TotalInProgressWorkouts      int      `json:"total_in_progress_workouts"`
-			TotalWorkouts                int      `json:"total_workouts"`
-			VodStreamURL                 string   `json:"vod_stream_url"`
-			VodStreamID                  string   `json:"vod_stream_id"`
-			ClassTypeIds                 []string `json:"class_type_ids"`
-			DifficultyEstimate           float64  `json:"difficulty_estimate"`
-			OverallEstimate              float64  `json:"overall_estimate"`
-		} `json:"ride"`
-		Created             int    `json:"created"`
-		DeviceTimeCreatedAt int    `json:"device_time_created_at"`
-		EffortZones         string `json:"effort_zones,omitempty"`
-	} `json:"data"`
-	Limit          int            `json:"limit"`
-	Page           int            `json:"page"`
-	Total          int            `json:"total"`
-	Count          int            `json:"count"`
-	PageCount      int            `json:"page_count"`
-	ShowPrevious   bool           `json:"show_previous"`
-	ShowNext       bool           `json:"show_next"`
-	SortBy         string         `json:"sort_by"`
-	Summary        map[string]int `json:"summary"`
-	AggregateStats []string       `json:"aggregate_stats,omitempty"`
 }
 
 type MeResponse struct {
@@ -213,6 +123,27 @@ type MeResponse struct {
 	HardwareSettings    string `json:"hardware_settings,omitempty"`
 }
 
+type WorkoutRecord struct {
+	WorkoutTimestamp	string	`json:"workout_timestamp"`
+	Live			string	`json:"live"`
+	InstructorName		string	`json:"instructor_name"`
+	Length			int	`json:"length"`
+	FitnessDiscipline	string	`json:"fitness_discipline"`
+	Type			string	`json:"type"`
+	Title			string	`json:"title"`
+	ClassTimestamp		string	`json:"class_timestamp"`
+	TotalOutput		int	`json:"total_output"`
+	AvgWatts		int	`json:"avg_watts"`
+	AvgResistance		string	`json:"avg_resistance"`
+	AvgCadence		int	`json:"avg_cadence"`
+	AvgSpeed		string	`json:"avg_speed"`
+	Distance		string	`json:"distance"`
+	CaloriesBurned		string	`json:"calories_burned"`
+	AvgHeartrate		string	`json:"avg_heartrate"`
+	AvgIncline		string	`json:"avg_incline"`
+	AvgPace			string	`json:"avg_pace"`
+}
+
 type Client struct {
 	client *http.Client
 }
@@ -271,19 +202,66 @@ func (c *Client) Me() (MeResponse, error) {
 	return me, nil
 }
 
-func (c *Client) Workouts(userID string) (WorkoutsResponse, error) {
-	var workouts WorkoutsResponse
-	res, err := c.client.Get(fmt.Sprintf("%s/api/user/%s/workouts", baseURL, userID))
-	if err != nil {
-		return workouts, err
+func createWorkoutJson(data []string) []WorkoutRecord {
+	var workoutJson []WorkoutRecord
+	for i, line := range data {
+		if i > 0 { // omit header
+			var rec WorkoutRecord
+			workoutLine := strings.Split(line, ",")
+			if workoutLine[0] == "" { // omit blank records
+				continue
+			}
+			for j, field := range workoutLine {
+				if j == 0 {
+					rec.WorkoutTimestamp = field
+				} else if j == 1 {
+					rec.Live = field
+				} else if j == 2 {
+					rec.InstructorName = field
+				} else if j == 3 {
+					var err error
+					rec.Length, err = strconv.Atoi(field)
+					if err != nil { continue }
+				} else if j == 4 {
+					rec.FitnessDiscipline = field
+				} else if j == 5 {
+					rec.Type = field
+				} else if j == 6 {
+					rec.Title = field
+				} else if j == 7 {
+					rec.ClassTimestamp = field
+				} else if j == 8 {
+					var err error
+					rec.TotalOutput, err = strconv.Atoi(field)
+					if err != nil { continue }
+				} else if j == 9 {
+					var err error
+					rec.AvgWatts, err = strconv.Atoi(field)
+					if err != nil { continue }
+				} else if j == 10 {
+					rec.AvgResistance = field
+				} else if j == 11 {
+					var err error
+					rec.AvgCadence, err = strconv.Atoi(field)
+					if err != nil { continue }
+				} else if j == 12 {
+					rec.AvgSpeed = field
+				} else if j == 13 {
+					rec.Distance = field
+				} else if j == 14 {
+					rec.CaloriesBurned = field
+				} else if j == 15 {
+					rec.AvgHeartrate = field
+				} else if j == 16 {
+					rec.AvgIncline = field
+				} else if j == 17 {
+					rec.AvgPace = field
+				}
+			}
+			workoutJson = append(workoutJson, rec)
+		}
 	}
-
-	err = json.NewDecoder(res.Body).Decode(&workouts)
-	if err != nil {
-		return workouts, err
-	}
-
-	return workouts, nil
+	return workoutJson
 }
 
 func (c *Client) WorkoutsCSV(userID string) ([]byte, error) {
@@ -314,7 +292,15 @@ func handleRequest(ctx context.Context, event events.SQSEvent) (string, error) {
 		return err.Error(), nil
 	}
 
-	return string(workouts), nil
+	workoutStrings := strings.Split(string(workouts),"\n")
+	workoutJson := createWorkoutJson(workoutStrings)
+	jsonData, err := json.MarshalIndent(workoutJson, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+		return err.Error(), nil
+	}
+
+	return string(jsonData), nil
 }
 
 func main() {
